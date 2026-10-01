@@ -98,3 +98,26 @@ PAYPOS: {
   </div>
 
 </div>
+
+// --- ВТОРАЯ организация (новые методы) ---
+  async onSecondOrgTypeChange() {
+    this.form.sender_second_org_name_select = "";
+    if (!this.form.sender_second_org_type) {
+      this.secondNameOrg = [];
+      return;
+    }
+    await this.fetchSecondNameOrganization();
+  },
+
+  async fetchSecondNameOrganization() {
+    try {
+      const type = this.form.sender_second_org_type;
+      const typeParam = type ? `?code1=${type}` : "";
+      const response = await axios.get(`/incidents/refs/bin${typeParam}`);
+      const data = response.data || [];
+      this.secondNameOrg = Array.isArray(data) ? data : data.data || [];
+    } catch (err) {
+      console.error("Ошибка загрузки Second Name ORG:", err);
+      this.secondNameOrg = [];
+    }
+  }
