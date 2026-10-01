@@ -1,0 +1,100 @@
+data() {
+  return {
+    form: {
+      // Существующие поля первой организации
+      sender_org_type: 'IO',
+      sender_org_name_select: '',
+
+      // Поля для ВТОРОЙ организации (если требуется раздельный выбор)
+      sender_second_org_type: 'IO',
+      sender_second_org_name_select: '',
+
+      // Новые поля для кассы/адреса
+      terminal_number: '',
+      terminal_address: '',
+      street: '',
+      house_number: ''
+    }
+  }
+}
+
+PAYPOS: {
+  showOrgType: true,               // Первая организация
+  showOrgName: true,
+  showSecondOrgType: true,         // Вторая организация
+  showSecondOrgName: true,
+  showTerminalFields: true,        // Флаг отображения блока кассы/адреса
+  // ...остальные флаги
+}
+
+
+<!-- ================= 2-Я ОРГАНИЗАЦИЯ ================= -->
+<div class="form-group mb-3" v-if="currentConfig.showSecondOrgType">
+  <label class="form-label">Тип организации (дополнительно) *</label>
+  <select v-model="form.sender_second_org_type" class="form-control">
+    <option value="IO">ГО</option>
+    <option value="BANK">БАНК</option>
+    <option value="MFO">МФО</option>
+  </select>
+</div>
+
+<div class="form-group mb-3" v-if="currentConfig.showSecondOrgName">
+  <label class="form-label">Наименование организации (дополнительно)</label>
+  <select v-model="form.sender_second_org_name_select" class="form-control">
+    <option value="" disabled selected hidden>Выберите наименование организации</option>
+    <option v-for="curr in filteredNameOrg" :key="curr.code" :value="curr.code">
+      {{ curr.name_ru }}
+    </option>
+  </select>
+</div>
+
+
+<!-- ================= ПОЛЯ КАССЫ И АДРЕСА ================= -->
+<!-- Отображаются только если включен флаг в конфиге И выбрана организация -->
+<div v-if="currentConfig.showTerminalFields && form.sender_second_org_name_select" class="terminal-fields-block">
+
+  <!-- Номер кассы / терминала -->
+  <div class="form-group mb-3">
+    <label class="form-label">Номер кассы / терминала / банкомата *</label>
+    <input 
+      type="text" 
+      v-model="form.terminal_number" 
+      class="form-control" 
+      placeholder="Введите номер терминала" 
+    />
+  </div>
+
+  <!-- Адрес кассы -->
+  <div class="form-group mb-3">
+    <label class="form-label">Адрес кассы / терминала / банкомата *</label>
+    <input 
+      type="text" 
+      v-model="form.terminal_address" 
+      class="form-control" 
+      placeholder="Введите адрес" 
+    />
+  </div>
+
+  <!-- Улица -->
+  <div class="form-group mb-3">
+    <label class="form-label">Улица</label>
+    <input 
+      type="text" 
+      v-model="form.street" 
+      class="form-control" 
+      placeholder="Введите улицу" 
+    />
+  </div>
+
+  <!-- Номер дома/квартиры -->
+  <div class="form-group mb-3">
+    <label class="form-label">Номер дома/квартиры</label>
+    <input 
+      type="text" 
+      v-model="form.house_number" 
+      class="form-control" 
+      placeholder="Введите номер дома/квартиры" 
+    />
+  </div>
+
+</div>
