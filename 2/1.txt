@@ -1,0 +1,35 @@
+<!-- ЕСЛИ ТРАНЗАКЦИЯ 'CR' — ОТОБРАЖАЕМ ЗАФИКСИРОВАННЫЕ ДАННЫЕ ВТБ -->
+<div v-if="selectedTransactionType === 'CR'" class="row">
+  <div class="col-md-6 mb-3">
+    <label class="form-label">Тип организации *</label>
+    <input 
+      type="text" 
+      class="form-control" 
+      value="БАНК" 
+      disabled 
+      readonly 
+    />
+  </div>
+
+  <div class="col-md-6 mb-3">
+    <label class="form-label">Наименование организации *</label>
+    <input 
+      type="text" 
+      class="form-control" 
+      value="ДО АО БАНК ВТБ Казахстан" 
+      disabled 
+      readonly 
+    />
+  </div>
+
+  <div class="col-md-6 mb-3">
+    <label class="form-label">БИН организации *</label>
+    <input 
+      type="text" 
+      class="form-control" 
+      value="080940010300" 
+      disabled 
+      readonly 
+    />
+  </div>
+</div>
