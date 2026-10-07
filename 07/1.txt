@@ -1,0 +1,115 @@
+// Загрузка файла в БД по id записи
+func AFAccostUploadBD(c echo.Context) error {
+    idRec := c.FormValue("id_rec")
+    fileHeader, err := c.FormFile("file")
+    if err != nil {
+        return c.JSON(400, map[string]interface{}{"success": false, "error": "Файл не выбран"})
+    }
+
+    file, err := fileHeader.Open()
+    if err != nil {
+        return c.JSON(500, map[string]interface{}{"success": false, "error": err.Error()})
+    }
+    defer file.Close()
+
+    fileBytes, err := io.ReadAll(file)
+    if err != nil {
+        return c.JSON(500, map[string]interface{}{"success": false, "error": err.Error()})
+    }
+
+    // Определяем расширение/тип файла (например: .pdf, .docx, .xlsx)
+    ext := filepath.Ext(fileHeader.Filename)
+
+    // Сохраняем имя, расширение и байты в БД
+    q := `UPDATE public.accost SET file_name = $1, file_type = $2, file_data = $3 WHERE id_rec = $4`
+    _, err = pg.DB().Exec(q, fileHeader.Filename, ext, fileBytes, idRec)
+    if err != nil {
+        return c.JSON(500, map[string]interface{}{"success": false, "error": err.Error()})
+    }
+
+    return c.JSON(200, map[string]interface{}{
+        "success":   true,
+        "file_name": fileHeader.Filename,
+        "file_type": ext,
+    })
+}
+
+// Отдача файла из БД для скачивания
+func AFAccostDownloadBD(c echo.Context) error {
+    idRec := c.Param("id")
+
+    var accost tAccost
+    q := `SELECT file_name, file_type, file_data FROM public.accost WHERE id_rec = $1`
+    err := pg.DB().Get(&accost, q, idRec)
+    if err != nil || len(accost.FileData) == 0 {
+        return c.JSON(404, map[string]interface{}{"success": false, "error": "Документ не найден в БД"})
+    }
+
+    // Отдаем файл клиенту
+    c.Response().Header().Set(echo.HeaderContentDisposition, "attachment; filename=\""+accost.FileName+"\"")
+    return c.Blob(200, "application/octet-stream", accost.FileData)
+}
+
+<th>Тип документа</th>
+<th>Документ</th>
+
+
+
+<!-- Колонка с типом файла (например, .pdf, .docx, .zip) -->
+<td class="ed" data-col="file_type">
+  <span v-if="a.file_type" class="badge">{{ a.file_type }}</span>
+  <span v-else>-</span>
+</td>
+
+<!-- Колонка со скачиванием файла -->
+<td class="ed">
+  <a v-if="a.file_name" :href="'/accost/download/' + a.id_rec" target="_blank" download style="color: #0066cc; text-decoration: underline;">
+    💾 {{ a.file_name }}
+  </a>
+  <span v-else>-</span>
+</td>
+
+
+
+
+
+<div class="form-group" style="margin-top: 15px;">
+  <label><strong>Прикрепить файл (Word, Excel, PDF, ZIP):</strong></label><br>
+  <input type="file" @change="uploadDocument" />
+
+  <div v-if="accost[0] && accost[0].file_name" style="margin-top: 8px;">
+    <strong>Прикреплен:</strong> {{ accost[0].file_name }} 
+    <span style="color: gray;">({{ accost[0].file_type }})</span> 
+    <a :href="'/accost/download/' + accost[0].id_rec" target="_blank" download style="margin-left: 10px;">
+      💾 Скачать
+    </a>
+  </div>
+</div>
+
+
+async uploadDocument(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('id_rec', this.accost[0].id_rec);
+
+  try {
+    const resp = await axios.post('/accost/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+
+    if (resp.data.success) {
+      this.accost[0].file_name = resp.data.file_name;
+      this.accost[0].file_type = resp.data.file_type;
+      alert("Документ сохранен в базу данных!");
+      this.fetchReport(); // Обновляем список
+    } else {
+      alert("Ошибка: " + resp.data.error);
+    }
+  } catch (error) {
+    console.error("Ошибка сохранения файла в БД:", error);
+    alert("Не удалось сохранить файл в базу данных");
+  }
+}
