@@ -1,0 +1,53 @@
+exportToExcel() {
+  const XLSX = window.XLSX;
+  if (!XLSX) {
+    alert("Ошибка: Библиотека XLSX не загружена!");
+    return;
+  }
+
+  if (!this.accost || this.accost.length === 0) {
+    alert("Нет данных для экспорта.");
+    return;
+  }
+
+  // Маппинг по вашим реальным полям из шаблона HTML
+  const excelData = this.accost.map(item => ({
+    'ID': item.id_rec,
+    'ИИН / БИН': item.req_identification_number || '-',
+    'Тип запроса': item.req_type || '-',
+    'Дата запроса': item.req_dt ? this.formatTime(item.req_dt) : '-',
+    'Заголовок': item.req_caption || '-',
+    'Текст запроса': item.req_text || '-',
+    'Запросил': item.req_person || '-',
+    'Отдел': item.req_dranch || '-',
+    'Email': item.req_email || '-',
+    'Текст ответа': item.res_text || '-',
+    'Дата ответа': item.res_dt ? this.formatTime(item.res_dt) : '-',
+    'Пользователь ЦФМ': item.res_person || '-',
+    'Наименование файла': item.file_name ? `Прикреплен (${item.file_name})` : 'Отсутствует'
+  }));
+
+  // Создаем лист и задаем удобную ширину колонок
+  const worksheet = XLSX.utils.json_to_sheet(excelData);
+  worksheet['!cols'] = [
+    { wch: 8 },  // ID
+    { wch: 16 }, // ИИН/БИН
+    { wch: 12 }, // Тип
+    { wch: 16 }, // Дата запроса
+    { wch: 20 }, // Заголовок
+    { wch: 30 }, // Текст запроса
+    { wch: 20 }, // Запросил
+    { wch: 15 }, // Отдел
+    { wch: 20 }, // Email
+    { wch: 30 }, // Текст ответа
+    { wch: 16 }, // Дата ответа
+    { wch: 20 }, // Пользователь ЦФМ
+    { wch: 30 }  // Файл
+  ];
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Реестр');
+
+  const dateStr = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(workbook, `accost_export_${dateStr}.xlsx`);
+}
