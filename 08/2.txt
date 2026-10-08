@@ -1,0 +1,26 @@
+<td class="align-middle text-center">
+  <!-- 1. Если файл ЕСТЬ: показываем только имя (или ссылку на скачивание) -->
+  <div v-if="a.file_name">
+    <a 
+      href="#" 
+      @click.prevent="downloadFile(a.id_rec, a.file_name)"
+      title="Нажмите, чтобы скачать файл"
+      style="color: #0066cc; text-decoration: underline; cursor: pointer; font-weight: 500;"
+    >
+      📄 {{ a.file_name }}
+    </a>
+  </div>
+
+  <!-- 2. Если файла НЕТ (колонка пустая): показываем красивую кнопку "Добавить файл" -->
+  <div v-else>
+    <label class="btn btn-sm btn-outline-primary mb-0" style="cursor: pointer;">
+      ➕ Добавить файл
+      <!-- Скрытый инпут файла для стильного вида кнопки -->
+      <input 
+        type="file" 
+        style="display: none;" 
+        @change="uploadFile($event, a.id_rec)" 
+      />
+    </label>
+  </div>
+</td>
