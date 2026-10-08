@@ -1,0 +1,110 @@
+<div class="d-flex align-items-center gap-2 mb-3 float-end">
+  <!-- Дата С -->
+  <label class="mb-0">С:</label>
+  <input 
+    type="date" 
+    v-model="filterDateFrom" 
+    class="form-control form-control-sm" 
+    style="width: 150px;" 
+  />
+
+  <!-- Дата ПО -->
+  <label class="mb-0">По:</label>
+  <input 
+    type="date" 
+    v-model="filterDateTo" 
+    class="form-control form-control-sm" 
+    style="width: 150px;" 
+  />
+
+  <!-- Кнопка выгрузки -->
+  <button 
+    type="button" 
+    class="btn btn-sm btn-success d-flex align-items-center gap-1" 
+    @click="exportToExcelByPeriod"
+  >
+    📊 Скачать в Excel за период
+  </button>
+</div>
+
+
+
+exportToExcelByPeriod() {
+    const XLSX = window.XLSX;
+    if (!XLSX) {
+      alert("Ошибка: Библиотека XLSX не загружена!");
+      return;
+    }
+
+    if (!this.accost || this.accost.length === 0) {
+      alert("Нет данных для экспорта.");
+      return;
+    }
+
+    // 1. Фильтруем массив по выбранному периоду даты запроса (req_dt)
+    let filteredList = this.accost;
+
+    if (this.filterDateFrom || this.filterDateTo) {
+      filteredList = this.accost.filter(item => {
+        if (!item.req_dt) return false;
+
+        // Преобразуем дату записи (req_dt) в формат YYYY-MM-DD для корректного сравнения
+        const itemDateStr = new Date(item.req_dt).toISOString().slice(0, 10);
+
+        if (this.filterDateFrom && itemDateStr < this.filterDateFrom) {
+          return false;
+        }
+        if (this.filterDateTo && itemDateStr > this.filterDateTo) {
+          return false;
+        }
+        return true;
+      });
+    }
+
+    if (filteredList.length === 0) {
+      alert("За выбранный период записи не найдены!");
+      return;
+    }
+
+    // 2. Маппинг отфильтрованных данных по вашим реальным полям
+    const excelData = filteredList.map(item => ({
+      'ID': item.id_rec,
+      'ИИН / БИН': item.req_identification_number || '-',
+      'Тип запроса': item.req_type || '-',
+      'Дата запроса': item.req_dt ? this.formatTime(item.req_dt) : '-',
+      'Заголовок': item.req_caption || '-',
+      'Текст запроса': item.req_text || '-',
+      'Запросил': item.req_person || '-',
+      'Отдел': item.req_dranch || '-',
+      'Email': item.req_email || '-',
+      'Текст ответа': item.res_text || '-',
+      'Дата ответа': item.res_dt ? this.formatTime(item.res_dt) : '-',
+      'Пользователь ЦФМ': item.res_person || '-',
+      'Наименование файла': item.file_name ? `Прикреплен (${item.file_name})` : 'Отсутствует'
+    }));
+
+    // 3. Генерация листа Excel и сохранение
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    worksheet['!cols'] = [
+      { wch: 8 },  // ID
+      { wch: 16 }, // ИИН/БИН
+      { wch: 12 }, // Тип
+      { wch: 16 }, // Дата запроса
+      { wch: 20 }, // Заголовок
+      { wch: 30 }, // Текст запроса
+      { wch: 20 }, // Запросил
+      { wch: 15 }, // Отдел
+      { wch: 20 }, // Email
+      { wch: 30 }, // Текст ответа
+      { wch: 16 }, // Дата ответа
+      { wch: 20 }, // Пользователь ЦФМ
+      { wch: 30 }  // Файл
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Реестр');
+
+    // Формируем имя файла с указанием периода
+    const periodName = (this.filterDateFrom || 'все') + '_по_' + (this.filterDateTo || 'все');
+    XLSX.writeFile(workbook, `accost_export_${periodName}.xlsx`);
+  }
