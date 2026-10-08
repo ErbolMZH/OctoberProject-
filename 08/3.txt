@@ -1,20 +1,39 @@
-exportToExcel() {
-  const XLSX = window.XLSX;
-  if (!XLSX) {
-    alert("Файл xlsx.full.min.js не подключен!");
-    return;
-  }
+// ----------------------------------------------------
+    exportToExcel() {
+      const XLSX = window.XLSX;
+      if (!XLSX) {
+        alert("Ошибка: Библиотека XLSX не загружена! Проверьте подключение script.");
+        return;
+      }
 
-  const excelData = this.accost.map(item => ({
-    'ID Записи': item.id_rec,
-    'ИИН / БИН': item.bin || item.iin || '-',
-    'ФИО': item.fio || '-',
-    'Документ': item.file_name ? `Да (${item.file_name})` : 'Нет'
-  }));
+      if (!this.accost || this.accost.length === 0) {
+        alert("Нет данных для экспорта.");
+        return;
+      }
 
-  const worksheet = XLSX.utils.json_to_sheet(excelData);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Реестр');
+      // Формируем структуру строк для экспорта
+      const excelData = this.accost.map(item => ({
+        'ID Записи': item.id_rec,
+        'Пользователь ЦФМ': item.user_cfm || '-',
+        'Тип документа': item.document_type || '-',
+        'ИИН / БИН': item.bin || item.iin || '-',
+        'Статус файла': item.file_name ? `Прикреплен (${item.file_name})` : 'Отсутствует'
+      }));
 
-  XLSX.writeFile(workbook, 'accost_export.xlsx');
-}
+      // Создаем Worksheet и настроим ширину колонок
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      worksheet['!cols'] = [
+        { wch: 10 }, // ID
+        { wch: 25 }, // Пользователь ЦФМ
+        { wch: 25 }, // Документ
+        { wch: 18 }, // ИИН/БИН
+        { wch: 35 }  // Статус файла
+      ];
+
+      // Создаем Workbook и сохраняем файл
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Реестр документов');
+
+      const dateStr = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(workbook, `accost_export_${dateStr}.xlsx`);
+    },
