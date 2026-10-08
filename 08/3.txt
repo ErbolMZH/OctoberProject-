@@ -1,0 +1,20 @@
+exportToExcel() {
+  const XLSX = window.XLSX;
+  if (!XLSX) {
+    alert("Файл xlsx.full.min.js не подключен!");
+    return;
+  }
+
+  const excelData = this.accost.map(item => ({
+    'ID Записи': item.id_rec,
+    'ИИН / БИН': item.bin || item.iin || '-',
+    'ФИО': item.fio || '-',
+    'Документ': item.file_name ? `Да (${item.file_name})` : 'Нет'
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(excelData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Реестр');
+
+  XLSX.writeFile(workbook, 'accost_export.xlsx');
+}
