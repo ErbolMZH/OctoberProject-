@@ -1,0 +1,136 @@
+<tr v-for="a in accostList" :key="a.id_rec">
+  <td>{{ a.id_rec }}</td>
+  <td>{{ a.document_type }}</td>
+
+  <!-- Поле прикрепления файла -->
+  <td>
+    <input 
+      type="file" 
+      @change="uploadFile($event, a.id_rec)" 
+      accept=".word,.excel,.pdf,.zip,.png,.jpg,.jpeg"
+    />
+    
+    <!-- Отображение текущего прикрепленного файла -->
+    <div v-if="a.file_name">
+      Прикреплен: <strong>{{ a.file_name }}</strong>
+    </div>
+  </td>
+</tr>
+
+
+
+
+uploadFile(event, idRec) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // 1. Формируем FormData для отправки бинарного файла и ID
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('id_rec', idRec); // 👈 Передаем ID конкретной строки!
+
+    // 2. Отправляем POST-запрос на бэкенд
+    axios.post('/accost/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    .then(response => {
+      if (response.data && response.data.success) {
+        alert('Файл успешно загружен!');
+        
+        // 3. Обновляем имя файла прямо в текущей строке без перезагрузки всей страницы
+        const item = this.accostList.find(x => x.id_rec === idRec);
+        if (item) {
+          item.file_name = file.name;
+          item.file_type = file.type;
+        }
+
+        // Очищаем инпут файла
+        event.target.value = '';
+      } else {
+        alert('Ошибка при загрузке: ' + (response.data.error || 'Неизвестная ошибка'));
+      }
+    })
+    .catch(error => {
+      console.error('Ошибка загрузки файла:', error);
+      alert('Произошла ошибка при отправке файла на сервер.');
+    });
+  }
+
+
+func AFAccostUploadBD(c echo.Context) error {
+	// 1. Считываем ID строки из FormData
+	idStr := c.FormValue("id_rec")
+	idRec, err := strconv.Atoi(idStr)
+	if err != nil || idRec <= 0 {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false,
+			"error":   "Некорректный или отсутствующий id_rec",
+		})
+	}
+
+	// 2. Получаем файл из запроса
+	fileHeader, err := c.FormFile("file")
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false,
+			"error":   "Файл не найден в запросе",
+		})
+	}
+
+	// 3. Открываем файл и читаем байты в память
+	file, err := fileHeader.Open()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"success": false,
+			"error":   "Не удалось открыть файл",
+		})
+	}
+	defer file.Close()
+
+	fileBytes, err := io.ReadAll(file)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"success": false,
+			"error":   "Ошибка чтения файла",
+		})
+	}
+
+	fileName := fileHeader.Filename
+	fileType := fileHeader.Header.Get("Content-Type")
+
+	// 4. Записываем байты и имя файла в конкретную строку базы данных PostgreSQL
+	query := `
+		UPDATE public.accost 
+		SET file_name = $1, 
+		    file_type = $2, 
+		    file_data = $3 
+		WHERE id_rec = $4
+	`
+
+	res, err := pg.DB().Exec(query, fileName, fileType, fileBytes, idRec)
+	if err != nil {
+		fmt.Println(" Ошибка записи в БД:", err)
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"success": false,
+			"error":   "Ошибка сохранения в базу данных",
+		})
+	}
+
+	rowsAffected, _ := res.RowsAffected()
+	if rowsAffected == 0 {
+		return c.JSON(http.StatusNotFound, map[string]interface{}{
+			"success": false,
+			"error":   fmt.Sprintf("Запись с id_rec = %d не найдена", idRec),
+		})
+	}
+
+	// 5. Успешный ответ
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success":   true,
+		"message":   "Файл успешно сохранен",
+		"file_name": fileName,
+		"id_rec":    idRec,
+	})
+}
