@@ -1,0 +1,121 @@
+watch: {
+  'form.receiver_requisite_type'(newType) {
+    if (newType !== 'CARD_MASK') this.form.receiver_card_masked = '';
+    if (newType !== 'ACCOUNT_KZ') {
+      this.form.receiver_iban = '';
+      this.form.receiver_account_status = '';
+      this.form.receiver_balance = '';
+      this.form.receiver_currency = '';
+    }
+    if (newType !== 'ELECTRONIC_WALLET') {
+      this.form.receiver_electronic_wallet = '';
+      this.form.receiver_electronic_number = '';
+    }
+    if (newType !== 'PAYMENT_POINT') {
+      this.form.terminal_number = '';
+      this.form.terminal_address = '';
+      this.form.terminal_street = '';
+      this.form.terminal_building = '';
+    }
+    if (newType !== 'ACCOUNT_FOREIGN_BANK') {
+      this.form.receiver_iban = ''; // или поле для счета иностранного банка
+    }
+  }
+},
+
+
+
+<!-- 1. Главный выпадающий список "Тип реквизита" (данные берутся из таблицы REQUISITE_TYPE) -->
+<div class="form-group mb-3">
+  <label class="form-label">Тип реквизита *</label>
+  <select v-model="form.receiver_requisite_type" class="form-control">
+    <option value="" disabled selected hidden>Выберите тип реквизита</option>
+    <option 
+      v-for="item in requisiteTypesList" 
+      :key="item.code" 
+      :value="item.code">
+      {{ item.name_ru }}
+    </option>
+  </select>
+</div>
+
+<!-- 2. Блок для КАРТЫ (CARD_MASK) -->
+<div v-if="form.receiver_requisite_type === 'CARD_MASK'">
+  <div class="form-group mb-3">
+    <label class="form-label">Маскированный номер карты *</label>
+    <input 
+      type="text" 
+      class="form-control" 
+      v-model="form.receiver_card_masked" 
+      placeholder="______######______"
+    />
+  </div>
+</div>
+
+<!-- 3. Блок для СЧЕТА KZ (ACCOUNT_KZ) или СЧЕТА ИНОСТРАННОГО БАНКА -->
+<div v-if="form.receiver_requisite_type === 'ACCOUNT_KZ' || form.receiver_requisite_type === 'ACCOUNT_FOREIGN_BANK'">
+  <div class="form-group mb-3">
+    <label class="form-label">IBAN *</label>
+    <input type="text" class="form-control" v-model="form.receiver_iban" placeholder="Введите IBAN" />
+  </div>
+
+  <div class="form-group mb-3">
+    <label class="form-label">Статус счета</label>
+    <select v-model="form.receiver_account_status" class="form-control">
+      <option value="" disabled selected hidden>Выберите статус счета</option>
+      <option v-for="curr in accountStatusList" :key="curr.code" :value="curr.code">{{ curr.name_ru }}</option>
+    </select>
+  </div>
+
+  <div class="form-group mb-3">
+    <label class="form-label">Остаток</label>
+    <input type="text" class="form-control" v-model="form.receiver_balance" placeholder="Введите баланс остатка на счете" />
+  </div>
+
+  <div class="form-group mb-3">
+    <label class="form-label">Валюта</label>
+    <select v-model="form.receiver_currency" class="form-control">
+      <option value="" disabled selected hidden>Выберите валюту</option>
+      <option v-for="curr in currencies" :key="curr.code" :value="curr.code">{{ curr.name_ru }}</option>
+    </select>
+  </div>
+</div>
+
+<!-- 4. Блок для ЭЛЕКТРОННОГО КОШЕЛЬКА (ELECTRONIC_WALLET) -->
+<div v-if="form.receiver_requisite_type === 'ELECTRONIC_WALLET'">
+  <div class="form-group mb-3">
+    <label class="form-label">Тип электронного кошелька *</label>
+    <select v-model="form.receiver_electronic_wallet" class="form-control">
+      <option value="" disabled selected hidden>Выберите кошелек</option>
+      <option v-for="curr in electronic_wallet" :key="curr.code" :value="curr.code">{{ curr.name_ru }}</option>
+    </select>
+  </div>
+
+  <div class="form-group mb-3">
+    <label class="form-label">Номер кошелька *</label>
+    <input type="text" class="form-control" v-model="form.receiver_electronic_number" placeholder="Введите номер кошелька" />
+  </div>
+</div>
+
+<!-- 5. Блок для КАССЫ / ТЕРМИНАЛА / БАНКОМАТА (PAYMENT_POINT) -->
+<div v-if="form.receiver_requisite_type === 'PAYMENT_POINT'">
+  <div class="form-group mb-3">
+    <label class="form-label">Номер кассы / терминала / банкомата *</label>
+    <input type="text" class="form-control" v-model="form.terminal_number" placeholder="Введите номер терминала" />
+  </div>
+
+  <div class="form-group mb-3">
+    <label class="form-label">Адрес кассы / терминала / банкомата *</label>
+    <input type="text" class="form-control" v-model="form.terminal_address" placeholder="Введите адрес" />
+  </div>
+
+  <div class="form-group mb-3">
+    <label class="form-label">Улица</label>
+    <input type="text" class="form-control" v-model="form.terminal_street" placeholder="Введите улицу" />
+  </div>
+
+  <div class="form-group mb-3">
+    <label class="form-label">Номер дома/квартиры</label>
+    <input type="text" class="form-control" v-model="form.terminal_building" placeholder="Введите номер дома/квартиры" />
+  </div>
+</div>
