@@ -1,0 +1,34 @@
+
+// 1. Функция для приведения даты из Go ("2026-10-19T00:00:00Z") к формату JS ("19.10.2026")
+const formatGoDate = (goDateStr) => {
+    if (!goDateStr) return '';
+    const datePart = goDateStr.split('T')[0]; // получаем "2026-10-19"
+    const [year, month, day] = datePart.split('-');
+    return `${day}.${month}.${year}`; // собираем "19.10.2026"
+};
+
+// 2. Функция для очистки JS-даты ("28.09.2026 00:00:00" -> "28.09.2026")
+const formatJsDate = (jsDateStr) => {
+    if (!jsDateStr) return '';
+    return jsDateStr.split(' ')[0];
+};
+
+// 3. Соединяем массивы: проходим по фронтовому массиву и подтягиваем совпадения из Go
+const mergedCalendar = jsArray.map(jsItem => {
+    // Если jsItem — это просто строка вроде "28.09.2026 00:00:00", берем его напрямую, 
+    // если это объект, то замени на jsItem.date
+    const currentJsDate = typeof jsItem === 'string' ? jsItem : jsItem.date;
+    const cleanJsDate = formatJsDate(currentJsDate);
+
+    // Ищем все записи из Go (`clist`), у которых дата совпадает с текущим днем фронта
+    const matchedRecords = clistFromGo.filter(goItem => {
+        return formatGoDate(goItem.date_calendar) === cleanJsDate;
+    });
+
+    return {
+        date: cleanJsDate,
+        // Здесь будут лежать все найденные объекты из Go для этой даты (или пустой массив)
+        antifraudData: matchedRecords,
+        hasFraud: matchedRecords.length > 0
+    };
+});
