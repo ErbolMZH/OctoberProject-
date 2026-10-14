@@ -1,0 +1,74 @@
+CREATE OR REPLACE PROCEDURE parse_refs_from_json(p_id INTEGER)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_json_data JSONB;
+BEGIN
+    -- 1. Получаем JSONB данные из таблицы refs_json по переданному id
+    SELECT json_ INTO v_json_data
+    FROM refs_json
+    WHERE id = p_id;
+
+    -- Проверяем, найдена ли запись и не пустой ли JSON
+    IF v_json_data IS NULL THEN
+        RAISE NOTICE 'Запись с id = % не найдена или поле json_ пустое.', p_id;
+        RETURN;
+    END IF;
+
+    -- 2. Разворачиваем JSON-массив с помощью jsonb_array_elements и вставляем в таблицу refs
+    INSERT INTO refs (
+        id, 
+        code, 
+        type, 
+        code1, 
+        code2, 
+        name_en, 
+        name_kz, 
+        name_ru, 
+        created_by, 
+        deleted_by, 
+        is_deleted, 
+        updated_by, 
+        created_date, 
+        deleted_date, 
+        updated_date, 
+        send_disabled
+    )
+    SELECT 
+        (elem->>'id')::UUID,
+        elem->>'code',
+        elem->>'type',
+        elem->>'code1',
+        elem->>'code2',
+        elem->>'name_en',
+        elem->>'name_kz',
+        elem->>'name_ru',
+        elem->>'createdBy',
+        elem->>'deletedBy',
+        (elem->>'isDeleted')::BOOLEAN,
+        elem->>'updatedBy',
+        NULLIF(elem->>'createdDate', '')::TIMESTAMP WITH TIME ZONE,
+        NULLIF(elem->>'deletedDate', '')::TIMESTAMP WITH TIME ZONE,
+        NULLIF(elem->>'updatedDate', '')::TIMESTAMP WITH TIME ZONE,
+        (elem->>'sendDisabled')::BOOLEAN
+    FROM jsonb_array_elements(v_json_data) AS elem
+    ON CONFLICT (id) DO UPDATE SET
+        code = EXCLUDED.code,
+        type = EXCLUDED.type,
+        code1 = EXCLUDED.code1,
+        code2 = EXCLUDED.code2,
+        name_en = EXCLUDED.name_en,
+        name_kz = EXCLUDED.name_kz,
+        name_ru = EXCLUDED.name_ru,
+        created_by = EXCLUDED.created_by,
+        deleted_by = EXCLUDED.deleted_by,
+        is_deleted = EXCLUDED.is_deleted,
+        updated_by = EXCLUDED.updated_by,
+        created_date = EXCLUDED.created_date,
+        deleted_date = EXCLUDED.deleted_date,
+        updated_date = EXCLUDED.updated_date,
+        send_disabled = EXCLUDED.send_disabled;
+
+    RAISE NOTICE 'Данные для id = % успешно спарсены и добавлены/обновлены в таблицу refs.', p_id;
+END;
+$$;
