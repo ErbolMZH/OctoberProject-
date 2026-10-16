@@ -1,0 +1,60 @@
+async getDok(in_id) {
+    let params = new URLSearchParams({
+        category: this.currentBranch,
+        id: in_id
+    });
+
+    this.isLoading = true;
+
+    try {
+        // Формируем путь (используем дефолтный адрес axios или относительный путь)
+        const baseUrl = (typeof axios !== 'undefined' && axios.defaults && axios.defaults.baseURL) ? axios.defaults.baseURL : '';
+        const url = `${baseUrl}/documents/getdoc?${params.toString()}`;
+
+        // Достаем токен авторизации из localStorage
+        const token = localStorage.getItem('jwt');
+
+        // Используем fetch вместо axios, чтобы избежать любых внутренних ошибок в axios.js
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Authorization': token ? `Bearer ${token}` : ''
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Ошибка сервера: ${response.status}`);
+        }
+
+        // Скачиваем файл как Blob
+        const blob = await response.blob();
+
+        // Достаем имя файла из заголовков ответа бэкенда
+        const contentDisposition = response.headers.get('content-disposition');
+        let fileName = 'downloaded_file';
+        if (contentDisposition) {
+            const fileNameMatch = contentDisposition.match(/filename=(.+)/);
+            if (fileNameMatch && fileNameMatch.length === 2) {
+                fileName = fileNameMatch[1].replace(/['"]/g, '');
+            }
+        }
+
+        // Создаем ссылку для скачивания в браузере
+        const link = document.createElement('a');
+        const blobUrl = window.URL.createObjectURL(blob);
+        
+        link.href = blobUrl;
+        link.setAttribute('download', fileName);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        window.URL.revokeObjectURL(blobUrl);
+
+    } catch (error) {
+        console.error('Ошибка при скачивании файла:', error);
+        alert('Не удалось скачать файл 13 МБ. Проверьте консоль.');
+    } finally {
+        this.isLoading = false;
+    }
+}
