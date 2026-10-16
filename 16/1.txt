@@ -1,0 +1,41 @@
+import (
+    "encoding/base64"
+    "encoding/json"
+    "strings"
+)
+
+// Извлекаем логин/имя пользователя из JWT токена (IdToken или AccessToken)
+func getUsernameFromJWT(tokenString string) string {
+    if tokenString == "" {
+        return "system"
+    }
+    parts := strings.Split(tokenString, ".")
+    if len(parts) < 2 {
+        return "system"
+    }
+    
+    // Декодируем вторую часть JWT (Payload)
+    payloadBytes, err := base64.RawURLEncoding.DecodeString(parts[1])
+    if err != nil {
+        return "system"
+    }
+    
+    var claims map[string]interface{}
+    if err := json.Unmarshal(payloadBytes, &claims); err != nil {
+        return "system"
+    }
+    
+    // В зависимости от настроек Keycloak/OAuth2, логин может быть в разных ключах:
+    // "preferred_username", "sub", "email" или "name"
+    if username, ok := claims["preferred_username"].(string); ok {
+        return username
+    }
+    if email, ok := claims["email"].(string); ok {
+        return email
+    }
+    if sub, ok := claims["sub"].(string); ok {
+        return sub
+    }
+    
+    return "unknown"
+}
