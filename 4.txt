@@ -1,0 +1,44 @@
+async getDok(in_id) {
+    let categoryValue = this.currentBranch;
+    if (categoryValue !== 'documents' && categoryValue !== 'correspondence') {
+        categoryValue = 'documents';
+    }
+
+    this.isLoading = true;
+
+    try {
+        const response = await axios.get('/af/documents/getdoc', {
+            params: {
+                category: categoryValue,
+                id: in_id
+            },
+            responseType: 'blob', // Говорим axios принять файл как бинарные данные
+            timeout: 120000
+        });
+
+        // ВАЖНО: response.data при responseType: 'blob' уже является Blob-объектом!
+        const blob = response.data;
+        const blobUrl = window.URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        
+        // Задаем имя файла (можете поменять расширение, если это не csv)
+        link.setAttribute('download', `document_${in_id}.csv`);
+        
+        document.body.appendChild(link);
+        link.click();
+        
+        // Убираем за собой
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(blobUrl);
+
+        console.log('Файл успешно отправлен на скачивание!');
+
+    } catch (error) {
+        console.error('Ошибка при скачивании:', error);
+        alert('Не удалось скачать файл. Проверьте консоль.');
+    } finally {
+        this.isLoading = false;
+    }
+}
