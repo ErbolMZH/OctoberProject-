@@ -1,0 +1,18 @@
+if (contentDisposition) {
+  // 1. Сначала пытаемся найти современный UTF-8 вариант (filename*=UTF-8''...)
+  const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;\n]+)/i);
+  if (utf8Match && utf8Match[1]) {
+    try {
+      // Декодируем URL-encoded символы (%D0%90...) обратно в кириллицу
+      fileName = decodeURIComponent(utf8Match[1]);
+    } catch (e) {
+      console.error('Failed to decode filename:', e);
+    }
+  } else {
+    // 2. Fallback на обычный filename="..." если UTF-8 не найден
+    const fallbackMatch = contentDisposition.match(/filename="([^"]+)"/i);
+    if (fallbackMatch && fallbackMatch[1]) {
+      fileName = fallbackMatch[1];
+    }
+  }
+}
