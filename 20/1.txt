@@ -1,0 +1,61 @@
+data() {
+    return {
+        hasNewInquiries: false // Флаг наличия новых запросов
+    };
+},
+mounted() {
+    this.checkNewInquiries();
+    // Опционально: опрос сервера каждые 30 секунд для актуальности
+    this.timer = setInterval(this.checkNewInquiries, 30000);
+},
+beforeDestroy() {
+    clearInterval(this.timer);
+},
+methods: {
+    async checkNewInquiries() {
+        try {
+            const response = await fetch('/af/inquiries/check-new', {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            });
+            const data = await response.json();
+            this.hasNewInquiries = data.has_new; // true или false
+        } catch (e) {
+            console.error("Ошибка проверки новых запросов:", e);
+        }
+    }
+}
+
+
+
+<router-link to="/home/incidents" class="topitem link" :class="[{ active: activeTab === 'incidents' }]" @click="changeSideBar('incidents')">
+    <i class="bug"></i>
+    <span class="menu-title noselect">Инциденты</span>
+    
+    <!-- Красный кружок-индикатор или счетчик новых запросов -->
+    <span v-if="hasNewInquiries" class="menu-badge-dot" title="Есть новые запросы!"></span>
+</router-link>
+
+
+/* Позиционирование точки справа в пункте меню */
+.topitem.link {
+    position: relative; /* нужно для абсолютного позиционирования бейджа */
+}
+
+.menu-badge-dot {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 10px;
+    height: 10px;
+    background-color: #ff4d4f; /* Красный цвет тревоги */
+    border-radius: 50%;
+    box-shadow: 0 0 6px #ff4d4f;
+    animation: menu-pulse 1.5s infinite;
+}
+
+@keyframes menu-pulse {
+    0% { transform: translateY(-50%) scale(0.9); opacity: 1; }
+    50% { transform: translateY(-50%) scale(1.3); opacity: 0.6; }
+    100% { transform: translateY(-50%) scale(0.9); opacity: 1; }
+}
