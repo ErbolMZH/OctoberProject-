@@ -1,0 +1,65 @@
+CREATE TABLE IF NOT EXISTS parsed_incidents (
+    incident_id VARCHAR(255) PRIMARY KEY,
+    related_organization JSONB,
+    author_organization TEXT,
+    status TEXT,
+    resolution_status TEXT,
+    creation_date TIMESTAMP WITH TIME ZONE,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+
+
+
+CREATE OR REPLACE PROCEDURE sp_parse_json_resolutions()
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- 1. Выполняем вставку/обновление данных в целевую таблицу на основе JSON из json_resolution
+    WITH extracted_info AS (
+        SELECT 
+            jr.id AS source_row_id,
+            i->>'incidentId' AS incident_id,
+            i->'relatedOrganization' AS related_organization,
+            i->>'authorOrganization' AS author_organization,
+            i->>'status' AS status,
+            i->>'resolutionStatus' AS resolution_status,
+            NULLIF(i->>'creationDate', '')::TIMESTAMP WITH TIME ZONE AS creation_date
+        FROM json_resolution jr,
+        LATERAL jsonb_array_elements(jr.json_::jsonb->'info') AS i
+        WHERE jr.status <> 3 -- Обрабатываем только те записи, у которых статус еще не 3
+    )
+    INSERT INTO parsed_incidents (
+        incident_id,
+        related_organization,
+        author_organization,
+        status,
+        resolution_status,
+        creation_date,
+        updated_at
+    )
+    SELECT 
+        incident_id,
+        related_organization,
+        author_organization,
+        status,
+        resolution_status,
+        creation_date,
+        CURRENT_TIMESTAMP
+    FROM extracted_info
+    ON CONFLICT (incident_id) 
+    DO UPDATE SET
+        related_organization = EXCLUDED.related_organization,
+        author_organization = EXCLUDED.author_organization,
+        status = EXCLUDED.status,
+        resolution_status = EXCLUDED.resolution_status,
+        creation_date = EXCLUDED.creation_date,
+        updated_at = CURRENT_TIMESTAMP;
+
+    -- 2. Меняем статус в исходной таблице json_resolution на 3 для всех успешно обработанных строк
+    UPDATE json_resolution 
+    SET status = 3 
+    WHERE status <> 3;
+
+END;
+$$;
