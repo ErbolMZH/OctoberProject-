@@ -1,0 +1,43 @@
+const PersonDetail = {
+  methods: {
+    async fetchPersonInfo() {
+      // ваш существующий код...
+    },
+
+    // Новый метод для обработки нажатия на кнопку
+    async updateSubjectData() {
+      if (!this.person_id) {
+        console.error("ID субъекта отсутствует!");
+        return;
+      }
+
+      this.isLoading = true;
+      this.hasError = false;
+
+      try {
+        // Отправляем POST запрос на наш Echo handler с ID текущего субъекта
+        const resp = await axios.post('/api/v1/subject/update', {
+          id: this.person_id
+        });
+
+        console.log("UPDATE RESPONSE:", resp.data);
+
+        // После успешного обновления заново запрашиваем актуальные данные на экран
+        await this.fetchPersonInfo();
+
+      } catch (error) {
+        this.hasError = true;
+        if (error.response && error.response.data) {
+          this.errorMessage = typeof error.response.data === 'object' 
+            ? (error.response.data.message || JSON.stringify(error.response.data)) 
+            : error.response.data;
+        } else {
+          this.errorMessage = error.message || error;
+        }
+        console.error("UPDATE ERROR:", error);
+      } finally {
+        this.isLoading = false;
+      }
+    }
+  }
+};
