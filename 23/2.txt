@@ -1,0 +1,29 @@
+async updateSubjectData() {
+  // Проверяем ID (используем this.person_id, так как он у вас используется в этом компоненте)
+  const id = (this.person_id || "").trim();
+  if (!id) {
+    alert("No Id for refreshing");
+    return;
+  }
+
+  this.isLoading = true;
+  this.hasError = false;
+
+  try {
+    // Делаем GET запрос точно так же, как в refreshSubject
+    const response = await axios.get(`/af/incidents/RefreshSubject/${encodeURIComponent(id)}`);
+    
+    console.log("UPDATE RESPONSE:", response.data);
+
+    // Успешное обновление и перезагрузка данных на экране
+    alert("Субъект обновлено успешно.");
+    await this.fetchPersonInfo();
+
+  } catch (err) {
+    this.hasError = true;
+    console.error("Ошибка при обновлении субъекта:", err);
+    alert("Ошибка при обновлении субъекта");
+  } finally {
+    this.isLoading = false;
+  }
+}
